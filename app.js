@@ -1,8 +1,7 @@
-let step = "start";
-let isListening = false;
+let active = true;
 
 // ===============================
-// SPEECH RECOGNITION SETUP
+// SPEECH RECOGNITION
 // ===============================
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -13,167 +12,122 @@ recognition.continuous = false;
 recognition.interimResults = false;
 
 // ===============================
-// INTENT DETECTION
-// ===============================
-
-function isYes(text) {
-  text = text.toLowerCase();
-  return ["yes", "yeah", "yep", "correct", "working", "ok", "okay", "fine", "running", "good", "normal"]
-    .some(w => text.includes(w));
-}
-
-function isNo(text) {
-  text = text.toLowerCase();
-  return ["no", "nope", "not", "fault", "problem", "issue", "failed", "dead", "not working"]
-    .some(w => text.includes(w));
-}
-
-// ===============================
-// START SYSTEM
+// START
 // ===============================
 
 function startDiagnosis() {
-  step = "q1";
+  active = true;
 
-  speak("Hello. I am your Generator and ATS diagnostic assistant.");
-
-  setTimeout(() => {
-    speak("First question. Is mains power failure detected?");
-  }, 2000);
+  speak("Hello. I am your Generator and ATS assistant. You can ask me anything.");
 
   setTimeout(() => {
-    startListening();
-  }, 4000);
+    speak("For example: generator fault, ATS issues, or general questions.");
+    listen();
+  }, 2500);
 }
 
 // ===============================
-// SAFE LISTENING LOOP
+// LISTEN LOOP
 // ===============================
 
-function startListening() {
-  if (isListening) return;
+function listen() {
+  if (!active) return;
 
   try {
-    isListening = true;
     recognition.start();
   } catch (e) {
-    console.log("Recognition restart blocked, retrying...");
-    setTimeout(() => {
-      isListening = false;
-      startListening();
-    }, 1000);
+    setTimeout(() => recognition.start(), 1000);
   }
 }
 
 // ===============================
-// RESULT HANDLER
+// SPEECH RESULT
 // ===============================
 
 recognition.onresult = function(event) {
-  const text = event.results[0][0].transcript;
-  console.log("Heard:", text);
+  const text = event.results[0][0].transcript.toLowerCase();
+  console.log("User said:", text);
 
-  isListening = false;
-
-  process(text);
+  handleInput(text);
 };
 
 // ===============================
-// AUTO RESTART ON END
+// MAIN BRAIN LOGIC
 // ===============================
 
-recognition.onend = function() {
-  isListening = false;
+function handleInput(text) {
 
-  // auto restart ONLY if diagnosis is active
-  if (step !== "end") {
-    setTimeout(() => startListening(), 800);
-  }
-};
+  // =========================
+  // CHECK END CONDITIONS
+  // =========================
 
-// ===============================
-// CORE DIAGNOSTIC ENGINE
-// ===============================
-
-function process(input) {
-
-  const unclear = !isYes(input) && !isNo(input);
-
-  if (unclear) {
-    speak("I did not understand. Please say yes or no.");
+  if (isEndCommand(text)) {
+    endConversation();
     return;
   }
 
-  // =======================
-  // STEP 1
-  // =======================
-  if (step === "q1") {
+  // =========================
+  // GENERATOR / ATS HELP MODE
+  // =========================
 
-    if (isYes(input)) {
-      step = "q2";
-      speak("Generator should start. Is generator starting?");
-    } else {
-      end("Power supply is normal. No generator start required.");
-      return;
-    }
-  }
-
-  // =======================
-  // STEP 2
-  // =======================
-  else if (step === "q2") {
-
-    if (isYes(input)) {
-      step = "q3";
-      speak("Do you hear starter relay clicking?");
-    } else {
-      end("Generator start failure. Check ATS start signal or battery system.");
-      return;
-    }
-  }
-
-  // =======================
-  // STEP 3
-  // =======================
-  else if (step === "q3") {
-
-    if (isYes(input)) {
-      step = "q4";
-      speak("Is fuel solenoid activating?");
-    } else {
-      end("Starter relay or control circuit fault detected.");
-      return;
-    }
-  }
-
-  // =======================
-  // STEP 4 FINAL
-  // =======================
-  else if (step === "q4") {
-
-    if (isYes(input)) {
-      end("Likely starter motor or control PCB failure.");
-    } else {
-      end("Fuel system or fuel solenoid fault detected.");
-    }
-
+  if (text.includes("generator")) {
+    speak("Generator systems usually fail due to battery, starter motor, fuel system, or ATS signal issues. What exactly is the problem you are facing?");
     return;
   }
+
+  if (text.includes("ats")) {
+    speak("ATS controls power transfer between mains and generator. Common faults include contactor failure, control relay issues, or sensing errors. What issue are you seeing?");
+    return;
+  }
+
+  if (text.includes("battery")) {
+    speak("Battery should be above 12.5 volts for proper starting. If low, charge or replace it. Do you want testing steps?");
+    return;
+  }
+
+  if (text.includes("relay")) {
+    speak("Starter relay failure is common in ATS systems. It may fail due to coil damage or control signal loss. Do you want wiring explanation?");
+    return;
+  }
+
+  // =========================
+  // DEFAULT AI RESPONSE
+  // =========================
+
+  speak("I understand. Let me help you with that. Can you give me more details?");
+}
+
+// ===============================
+// END DETECTION
+// ===============================
+
+function isEndCommand(text) {
+  const endPhrases = [
+    "end",
+    "end of conversation",
+    "thank you that's all",
+    "thank you thats all",
+    "disconnect",
+    "stop",
+    "finish",
+    "close"
+  ];
+
+  return endPhrases.some(p => text.includes(p));
 }
 
 // ===============================
 // END SYSTEM
 // ===============================
 
-function end(message) {
+function endConversation() {
+  active = false;
 
-  step = "end";
-
-  speak(message);
+  speak("Okay. Ending the session. Goodbye.");
 
   setTimeout(() => {
-    speak("Diagnosis complete. Thank you.");
-  }, 2500);
+    recognition.stop();
+  }, 1500);
 }
 
 // ===============================
@@ -187,4 +141,8 @@ function speak(text) {
   msg.lang = "en-US";
 
   speechSynthesis.speak(msg);
+
+  msg.onend = () => {
+    if (active) listen();
+  };
 }
