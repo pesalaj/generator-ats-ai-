@@ -2,27 +2,29 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 const recognition = new SpeechRecognition();
 
 recognition.lang = "en-US";
-recognition.continuous = false;
 
 let active = false;
+
+// 🔴 PUT YOUR RAILWAY URL HERE
+const API_URL = "https://YOUR_RAILWAY_URL/ai";
 
 function log(text) {
   document.getElementById("log").innerText += "\n" + text;
 }
 
-// ===============================
+// =====================
 // START
-// ===============================
+// =====================
 
 function startAI() {
   active = true;
-  speak("Industrial AI assistant activated. Ask your question.");
+  speak("AI assistant activated. Ask your question.");
   listen();
 }
 
-// ===============================
+// =====================
 // LISTEN
-// ===============================
+// =====================
 
 function listen() {
   if (!active) return;
@@ -30,24 +32,28 @@ function listen() {
   recognition.start();
 }
 
+// =====================
+// VOICE RESULT
+// =====================
+
 recognition.onresult = async function(event) {
   const text = event.results[0][0].transcript;
   log("You: " + text);
 
-  const response = await sendToAI(text);
+  const reply = await sendToAI(text);
 
-  log("AI: " + response);
-  speak(response);
+  log("AI: " + reply);
+  speak(reply);
 };
 
-// ===============================
-// SEND TO BACKEND AI
-// ===============================
+// =====================
+// CALL RAILWAY BACKEND
+// =====================
 
 async function sendToAI(text) {
-  const res = await fetch("http://localhost:3000/ai", {
+  const res = await fetch(API_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {"Content-Type":"application/json"},
     body: JSON.stringify({ message: text })
   });
 
@@ -55,13 +61,12 @@ async function sendToAI(text) {
   return data.reply;
 }
 
-// ===============================
-// VOICE OUTPUT
-// ===============================
+// =====================
+// SPEECH OUTPUT
+// =====================
 
 function speak(text) {
   const msg = new SpeechSynthesisUtterance(text);
-  msg.lang = "en-US";
 
   msg.onend = () => {
     if (active) listen();
