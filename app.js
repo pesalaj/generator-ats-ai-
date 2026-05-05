@@ -2,7 +2,7 @@ let step = 0;
 
 const questions = [
   "Is generator not starting on mains failure?",
-  "Is battery voltage above 12.5V?",
+  "Is battery voltage above 12.5 volts?",
   "Do you hear starter relay click?",
   "Is fuel solenoid activating?"
 ];
@@ -14,29 +14,49 @@ const results = [
   "Fuel system or control wiring fault."
 ];
 
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const recognition = new SpeechRecognition();
+
+recognition.continuous = false;
+recognition.lang = "en-US";
+
 function startDiagnosis() {
   step = 0;
   speak(questions[step]);
-  show(questions[step]);
+  listen(); // start listening immediately
 }
 
-function answer(val) {
+function listen() {
+  recognition.start();
+}
+
+recognition.onresult = function(event) {
+  let answer = event.results[0][0].transcript.toLowerCase();
+  processAnswer(answer);
+};
+
+function processAnswer(answer) {
+  let isYes = answer.includes("yes");
+  let isNo = answer.includes("no");
+
   step++;
 
   if (step < questions.length) {
     speak(questions[step]);
-    show(questions[step]);
+    listen(); // keep loop going
   } else {
     speak(results[step - questions.length]);
-    show(results[step - questions.length]);
   }
-}
-
-function show(text) {
-  document.getElementById("display").innerText = text;
 }
 
 function speak(text) {
   const msg = new SpeechSynthesisUtterance(text);
   speechSynthesis.speak(msg);
+
+  msg.onend = function() {
+    // automatically start listening after speaking
+    if (step < questions.length) {
+      listen();
+    }
+  };
 }
