@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generator ATS Diagnostic</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="container">
+    <h1>Generator & ATS Fault Assistant</h1>
+
+    <div id="display">Press Start Diagnosis</div>
+
+    <button onclick="startDiagnosis()">🎤 Start</button>
+    <button onclick="answer('yes')">YES</button>
+    <button onclick="answer('no')">NO</button>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
